@@ -9,7 +9,7 @@ let fixtures = [];
 let selectedMode = 'today';
 
 function toast(message) { const el = $('#toast'); el.textContent = message; el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 3500); }
-async function getJSON(path) { const r = await fetch(path); const d = await r.json(); if (!r.ok) throw new Error(d.error || 'İstek başarısız.'); return d; }
+async function getJSON(path) { const r = await fetch(path); const d = await r.json(); if (!r.ok || d.error) throw new Error(d.error || 'İstek başarısız.'); return d; }
 
 async function loadStatus() {
   try { const status = await getJSON('/api/status'); $('#connectionText').textContent = status.connected ? 'Veri bağlantısı aktif' : 'Demo modu'; $('#connectionSub').textContent = status.connected ? 'API-Football bağlantısı hazır' : 'API anahtarı yapılandırılmalı'; if (status.connected) loadFixtures(); }

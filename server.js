@@ -20,7 +20,7 @@ async function api(endpoint, params = {}) {
   const response = await fetch(url, { headers: { 'x-apisports-key': API_KEY } });
   const data = await response.json();
   if (!response.ok || data.errors && Object.keys(data.errors).length) {
-    throw Object.assign(new Error(JSON.stringify(data.errors || data.message || 'Veri sağlayıcı isteği başarısız.')), { status: response.status || 502 });
+    throw Object.assign(new Error(JSON.stringify(data.errors || data.message || 'Veri sağlayıcı isteği başarısız.')), { status: response.ok ? 502 : response.status || 502 });
   }
   return data.response || [];
 }
