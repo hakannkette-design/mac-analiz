@@ -1,0 +1,12 @@
+{
+  "name": "mac-analiz",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Futbol maçları için veriye dayalı analiz arayüzü",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

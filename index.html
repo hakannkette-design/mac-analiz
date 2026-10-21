@@ -1,0 +1,40 @@
+<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101713"><title>Mac Analiz — Futbolun veriye dayalı hali</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div class="shell">
+    <aside class="sidebar">
+      <a class="brand" href="#"><span class="brand-mark">M</span><span>mac<span class="brand-light">analiz</span></span></a>
+      <div class="side-label">ÇALIŞMA ALANI</div>
+      <button class="nav-item active"><span>◉</span> Maç analizi</button>
+      <button class="nav-item" id="todayNav"><span>▦</span> Bugünün maçları <span class="nav-arrow">↗</span></button>
+      <div class="side-label leagues-label">LİGLER <span>⌄</span></div>
+      <div class="league-links"><span>🇹🇷</span> Süper Lig <span>›</span></div>
+      <div class="league-links"><span>🏴</span> Premier League <span>›</span></div>
+      <div class="league-links"><span>🇪🇸</span> La Liga <span>›</span></div>
+      <div class="league-links"><span>🇩🇪</span> Bundesliga <span>›</span></div>
+      <div class="league-links"><span>🇮🇹</span> Serie A <span>›</span></div>
+      <div class="sidebar-bottom"><div class="api-card"><span class="pulse"></span><div><b id="connectionText">Demo modu</b><small id="connectionSub">Veri bağlantısı bekleniyor</small></div><span class="more">···</span></div><div class="profile"><div class="avatar">M</div><div><b>Maç Merkezi</b><small>Futbol analiz paneli</small></div><span class="more">⌄</span></div></div>
+    </aside>
+    <main class="main">
+      <header class="topbar"><div class="crumb">Analiz <span>/</span> <b>Maç merkezi</b></div><div class="top-actions"><span class="live-dot"></span><span id="topDate">Bugün</span><button class="icon-btn" title="Bildirimler">♧</button><button class="avatar small">M</button></div></header>
+      <section class="intro"><div><div class="eyebrow"><span class="spark">✳</span> FUTBOL VERİ ANALİZİ</div><h1>Maçın hikâyesini<br><em>veriler anlatsın.</em></h1><p>Bir maç seç. Form, geçmiş karşılaşmalar, kadro ve eksikleri tek yerde incele.</p></div><div class="intro-note"><span class="note-icon">✳</span><div><b>Veriye dayalı analiz</b><small>Tahminler olasılıktır, kesin sonuç değildir.</small></div></div></section>
+      <section class="search-panel"><div class="panel-head"><div><span class="step">01</span><div><h2>Maçını seç</h2><p>Tüm liglerdeki bir karşılaşmayı bul veya takımları seç.</p></div></div><span class="coverage-tag"><span class="pulse"></span> TÜM LİGLER</span></div>
+        <div class="mode-tabs"><button class="mode-tab selected" data-mode="today">Bugünün maçları</button><button class="mode-tab" data-mode="manual">Takımları seç</button></div>
+        <div id="todayMode" class="match-search"><div class="input-wrap"><span class="input-icon">⌕</span><input id="fixtureSearch" type="search" placeholder="Takım, lig veya ülke ara..." autocomplete="off"><kbd>⌘ K</kbd></div><button class="date-button" id="dateButton">▦ <span id="dateLabel">21 Ekim 2026</span> <span>⌄</span></button><input type="date" id="matchDate" class="hidden-date"></div>
+        <div id="manualMode" class="manual-search hidden"><label><span>EV SAHİBİ</span><div class="input-wrap"><span class="club-dot">●</span><input id="homeInput" placeholder="Takım adını yazın" list="teams"><datalist id="teams"></datalist></div></label><span class="versus">VS</span><label><span>DEPLASMAN</span><div class="input-wrap"><span class="club-dot away-dot">●</span><input id="awayInput" placeholder="Takım adını yazın" list="teams"></div></label><button id="manualAnalyze" class="analyze-button">Analiz et <span>→</span></button></div>
+        <div id="fixtureList" class="fixture-list"><div class="list-top"><span id="fixtureHeading">ÖNE ÇIKAN MAÇLAR</span><span id="fixtureCount"></span></div><div id="fixtureRows"><div class="empty-state"><span>▦</span><b>Maçları görmek için bağlantı gerekli</b><small>API anahtarınızı ekleyince tüm liglerin maçları burada listelenecek.</small></div></div></div>
+      </section>
+      <section id="analysis" class="analysis-section"><div class="analysis-placeholder"><div class="radar">✳</div><div><b>Analiz burada görünecek</b><span>Yukarıdan bir maç seç veya iki takım adı gir.</span></div><div class="placeholder-line"></div><div class="placeholder-line short"></div></div></section>
+      <footer><span>MAC ANALİZ <i>•</i> FUTBOL VERİLERİ</span><span>Veri kapsamı lige ve kaynağa göre değişebilir.</span></footer>
+    </main>
+  </div>
+  <div id="toast" class="toast"></div>
+  <script src="/app.js"></script>
+</body></html>
