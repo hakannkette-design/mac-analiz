@@ -24,4 +24,4 @@ API anahtarı olmadan arayüz demo modunda açılır. Gerçek maç listesi ve ta
 
 ## Analiz hakkında
 
-Galibiyet/beraberlik oranları, lig içi sezon galibiyet oranı, ev sahibi avantajı ve maç eksikleri ile oluşturulan başlangıç seviyesi bir model tahminidir. Bunlar bahis tavsiyesi veya kesin sonuç değildir. Veri sağlayıcı bazı liglerde ilk 11 ve sakatlık verisini sunmayabilir ya da gecikmeli güncelleyebilir. Analiz kartı bunu açıkça belirtir.
+Skor ve gol tahminleri, takımların tüm organizasyonlardaki son 10 maçının gol ortalamaları ile iki takım arasındaki son 20 karşılaşmanın (lig ayrımı yapılmadan) sonuçlarından üretilen basit bir Poisson modelidir. Gösterilen skor en yüksek olasılıklı skor; gol satırları toplam golün belirtilen eşiğe ulaşma olasılığıdır. Bunlar bahis tavsiyesi veya kesin sonuç değildir. Veri sağlayıcı bazı liglerde ilk 11 ve sakatlık verisini sunmayabilir ya da gecikmeli güncelleyebilir.

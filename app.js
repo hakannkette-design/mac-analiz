@@ -43,34 +43,46 @@ function renderFixtures() {
 }
 
 function pct(n) { return `${Math.round(n)}%`; }
+function finished(items) {
+  return (items || []).filter(m => ['FT','AET','PEN'].includes(m.fixture.status.short) && m.goals.home != null && m.goals.away != null);
+}
+function teamRecord(items, teamId) {
+  const matches = finished(items);
+  let goalsFor = 0, goalsAgainst = 0, wins = 0, draws = 0;
+  for (const m of matches) {
+    const isHome = m.teams.home.id === teamId;
+    const gf = isHome ? m.goals.home : m.goals.away, ga = isHome ? m.goals.away : m.goals.home;
+    goalsFor += gf; goalsAgainst += ga;
+    if (gf > ga) wins++; else if (gf === ga) draws++;
+  }
+  return { count: matches.length, gf: matches.length ? goalsFor / matches.length : null, ga: matches.length ? goalsAgainst / matches.length : null, wins, draws, form: matches.slice(0,5).map(m => {
+    const isHome = m.teams.home.id === teamId;
+    const gf = isHome ? m.goals.home : m.goals.away, ga = isHome ? m.goals.away : m.goals.home;
+    return gf > ga ? 'G' : gf === ga ? 'B' : 'M';
+  }).join('') };
+}
 function resultProb(data) {
-  const recent = (items, teamId) => {
-    let points = 0, count = 0;
-    for (const m of items) {
-      if (m.fixture.status.short !== 'FT' && m.fixture.status.short !== 'AET' && m.fixture.status.short !== 'PEN') continue;
-      const isHome = m.teams.home.id === teamId;
-      const gf = isHome ? m.goals.home : m.goals.away, ga = isHome ? m.goals.away : m.goals.home;
-      if (gf == null || ga == null) continue;
-      points += gf > ga ? 3 : gf === ga ? 1 : 0; count++;
-    }
-    return count ? points / (count * 3) : .48;
-  };
   const h = data.match.teams.home.id, a = data.match.teams.away.id;
-  const hs = data.homeStats, as = data.awayStats;
-  const formScore = (stats, fallback) => {
-    const played = stats?.fixtures?.played?.total || 0;
-    const wins = stats?.fixtures?.wins?.total || 0;
-    return played ? wins / played : fallback;
+  const home = teamRecord(data.homeRecent, h), away = teamRecord(data.awayRecent, a);
+  const pair = finished(data.h2h);
+  const h2hHome = teamRecord(pair, h), h2hAway = teamRecord(pair, a);
+  const blend = (own, opponent, h2hOwn, fallback) => {
+    const recentValue = own.gf != null && opponent.ga != null ? own.gf * .55 + opponent.ga * .45 : own.gf ?? opponent.ga ?? fallback;
+    return Math.max(.15, Math.min(4.5, h2hOwn.gf == null ? recentValue : recentValue * .78 + h2hOwn.gf * .22));
   };
-  const hp = formScore(hs, recent(data.h2h, h));
-  const ap = formScore(as, recent(data.h2h, a));
-  let home = 0.35 + (hp - ap) * .32 + .06;
-  let away = 0.29 + (ap - hp) * .32;
-  const injuriesHome = data.injuries.filter(x => x.team.id === h).length;
-  const injuriesAway = data.injuries.filter(x => x.team.id === a).length;
-  home -= injuriesHome * .012; away -= injuriesAway * .012;
-  const total = home + away; home = home / total * .72; away = away / total * .72;
-  return { home, draw: .28, away, hp, ap };
+  const lambdaHome = blend(home, away, h2hHome, 1.45) * 1.06;
+  const lambdaAway = blend(away, home, h2hAway, 1.15) * .96;
+  const fact = n => n < 2 ? 1 : n * fact(n - 1);
+  const probs = (lambda) => Array.from({length: 9}, (_, n) => Math.exp(-lambda) * Math.pow(lambda, n) / fact(n));
+  const hp = probs(lambdaHome), ap = probs(lambdaAway);
+  let homeWin = 0, draw = 0, awayWin = 0, best = { p: -1, h: 0, a: 0 };
+  for (let hg=0; hg<hp.length; hg++) for (let ag=0; ag<ap.length; ag++) {
+    const chance = hp[hg] * ap[ag];
+    if (hg > ag) homeWin += chance; else if (hg === ag) draw += chance; else awayWin += chance;
+    if (chance > best.p) best = { p: chance, h: hg, a: ag };
+  }
+  const atLeast = threshold => 1 - Array.from({length: threshold}, (_, n) => hp[n] * ap.slice(0, threshold - n).reduce((sum, x) => sum + x, 0)).reduce((sum, x) => sum + x, 0);
+  return { home: homeWin, draw, away: awayWin, lambdaHome, lambdaAway, score: best, goals1: atLeast(1), goals2: atLeast(2), goals3: atLeast(3), goals4: atLeast(4), homeRecord: home, awayRecord: away, h2hHome, h2hAway, h2hCount: pair.length };
 }
 async function analyze(id) {
   $('#analysis').innerHTML = '<div class="analysis-placeholder"><div class="radar">◌</div><div><b>Maç analiz ediliyor…</b><span>Form, geçmiş maçlar, kadro ve eksikler taranıyor.</span></div></div>';
@@ -81,8 +93,8 @@ async function analyze(id) {
 function renderAnalysis(d) {
   const m = d.match, h = m.teams.home, a = m.teams.away;
   const p = resultProb(d);
-  const f = (stats) => stats?.form ? stats.form.slice(-5).split('').map(c => `<span class="badge ${c === 'L' ? 'warning' : ''}">${c === 'W' ? 'G' : c === 'D' ? 'B' : c === 'L' ? 'M' : c}</span>`).join('') : '<span class="badge">Form verisi yok</span>';
-  const h2h = d.h2h.slice(0, 8);
+  const f = (record) => record?.form ? record.form.split('').map(c => `<span class="badge ${c === 'M' ? 'warning' : ''}">${c}</span>`).join('') : '<span class="badge">Form verisi yok</span>';
+  const h2h = finished(d.h2h).slice(0, 20);
   const hWins = h2h.filter(x => x.teams.home.id === h.id ? x.goals.home > x.goals.away : x.goals.away > x.goals.home).length;
   const aWins = h2h.filter(x => x.teams.home.id === a.id ? x.goals.home > x.goals.away : x.goals.away > x.goals.home).length;
   const draws = h2h.filter(x => x.goals.home === x.goals.away).length;
@@ -91,8 +103,8 @@ function renderAnalysis(d) {
   const playerList = (team) => lineups(team).length ? `<ul>${lineups(team).map(x => `<li>${escapeHTML(x.player.name)}</li>`).join('')}</ul>` : '<ul><li>İlk 11 henüz açıklanmadı</li></ul>';
   const injuryList = [...injured(h), ...injured(a)];
   const pctBar = (label, val) => `<div class="prob-row"><span>${label}</span><div class="bar"><i style="width:${pct(val*100)}"></i></div><b>${pct(val*100)}</b></div>`;
-  const paragraph = `${h.name} için modelin hesapladığı galibiyet olasılığı ${pct(p.home*100)}; ${a.name} için ${pct(p.away*100)}. Beraberlik olasılığı ${pct(p.draw*100)}. ${h2h.length ? `Son ${h2h.length} karşılaşmada tablo ${hWins} ${h.name} galibiyeti, ${draws} beraberlik ve ${aWins} ${a.name} galibiyeti.` : 'İki takımın geçmiş karşılaşma verisi bulunamadı.'} Bu tahmin; lig performansı, iç saha avantajı ve bildirilen eksikleri temel alan basit bir modeldir.`;
-  $('#analysis').innerHTML = `<div class="analysis-card"><div class="result-card"><div class="result-heading">MAÇ ANALİZİ · ${escapeHTML(m.league.name.toLocaleUpperCase('tr-TR'))}</div><div class="result-match"><div class="club"><img src="${escapeHTML(h.logo)}"><b>${escapeHTML(h.name)}</b></div><div class="score-mid"><strong>${m.goals.home ?? '—'} : ${m.goals.away ?? '—'}</strong>${escapeHTML(m.fixture.status.long)}</div><div class="club"><img src="${escapeHTML(a.logo)}"><b>${escapeHTML(a.name)}</b></div></div><div class="prob-title">1X2 KAZANMA OLASILIKLARI <span style="float:right">model tahmini</span></div><div class="prob-bars">${pctBar('Ev sahibi',p.home)}${pctBar('Beraberlik',p.draw)}${pctBar('Deplasman',p.away)}</div></div><div class="detail-card"><h3>Takım formu <span style="float:right;color:#7d8b81;font:9px var(--font)">Son maçlar</span></h3><div class="stat-line"><span>${escapeHTML(h.name)}</span><b></b></div><div class="badges">${f(d.homeStats)}</div><div class="stat-line"><span>${escapeHTML(a.name)}</span><b></b></div><div class="badges">${f(d.awayStats)}</div><div class="stat-line"><span>Geçmiş maçlar</span><b>${hWins}G · ${draws}B · ${aWins}G</b></div><div class="stat-line"><span>Eksik oyuncu</span><b>${injuryList.length} bildirim</b></div></div><div class="detail-card"><h3>Muhtemel / açıklanan ilk 11</h3><div class="lineup-columns"><div class="lineup-box"><b>${escapeHTML(h.name)}</b>${playerList(h)}</div><div class="lineup-box"><b>${escapeHTML(a.name)}</b>${playerList(a)}</div></div></div><div class="detail-card"><h3>Sakat / cezalı oyuncular</h3>${injuryList.length ? injuryList.map(x=>`<div class="injury-item">${escapeHTML(x.player.name)} · ${escapeHTML(x.team.name)} <span>${escapeHTML(x.player.reason || 'Eksik')}</span></div>`).join('') : '<div class="injury-item">Bu maç için bildirilmiş eksik bulunamadı. Veri bulunmaması, eksik olmadığı anlamına gelmeyebilir.</div>'}</div><div class="analysis-summary"><h3>Maçın kısa özeti</h3><p>${escapeHTML(paragraph)}</p><div class="badges"><span class="badge">Kaynak: API-Football</span><span class="badge">${d.lineups.length ? 'İlk 11 verisi mevcut' : 'İlk 11 henüz açıklanmadı'}</span><span class="badge warning">Olasılık tahmindir, garanti değildir</span></div></div></div>`;
+  const paragraph = `Skor modeli ${p.score.h}-${p.score.a} sonucunu en yüksek olasılıklı skor olarak buluyor; beklenen gol ${h.name} ${p.lambdaHome.toFixed(1)} – ${a.name} ${p.lambdaAway.toFixed(1)}. En az 2 gol olasılığı ${pct(p.goals2*100)}, en az 3 gol olasılığı ${pct(p.goals3*100)}. ${h2h.length ? `Lig ayrımı olmadan bulunan son ${h2h.length} karşılaşmada ${hWins} ${h.name} galibiyeti, ${draws} beraberlik ve ${aWins} ${a.name} galibiyeti var.` : 'İki takım arasında geçmiş karşılaşma kaydı bulunamadı.'} Takımların son maç formu da lig ayrımı yapılmadan değerlendirilir. Tahminler geçmiş gol ortalamalarına dayalı olasılıksal model çıktısıdır; kesin sonuç değildir.`;
+  $('#analysis').innerHTML = `<div class="analysis-card"><div class="result-card"><div class="result-heading">MAÇ ANALİZİ · ${escapeHTML(m.league.name.toLocaleUpperCase('tr-TR'))}</div><div class="result-match"><div class="club"><img src="${escapeHTML(h.logo)}"><b>${escapeHTML(h.name)}</b></div><div class="score-mid"><strong>${m.goals.home ?? '—'} : ${m.goals.away ?? '—'}</strong>${escapeHTML(m.fixture.status.long)}</div><div class="club"><img src="${escapeHTML(a.logo)}"><b>${escapeHTML(a.name)}</b></div></div><div class="score-prediction"><span>TAHMİNİ SKOR</span><strong>${p.score.h} – ${p.score.a}</strong><small>En olası skor · beklenen gol ${p.lambdaHome.toFixed(1)} – ${p.lambdaAway.toFixed(1)}</small></div><div class="prob-title">1X2 KAZANMA OLASILIKLARI <span style="float:right">gol modeli</span></div><div class="prob-bars">${pctBar('Ev sahibi',p.home)}${pctBar('Beraberlik',p.draw)}${pctBar('Deplasman',p.away)}</div></div><div class="detail-card"><h3>Gol tahmini</h3><div class="stat-line"><span>Toplam beklenen gol</span><b>${(p.lambdaHome+p.lambdaAway).toFixed(1)}</b></div><div class="stat-line"><span>En az 1 gol</span><b>${pct(p.goals1*100)}</b></div><div class="stat-line"><span>En az 2 gol</span><b>${pct(p.goals2*100)}</b></div><div class="stat-line"><span>En az 3 gol</span><b>${pct(p.goals3*100)}</b></div><div class="stat-line"><span>En az 4 gol</span><b>${pct(p.goals4*100)}</b></div></div><div class="detail-card"><h3>Takım formu <span style="float:right;color:#7d8b81;font:9px var(--font)">Son 5 · tüm ligler</span></h3><div class="stat-line"><span>${escapeHTML(h.name)}</span><b>${p.homeRecord.count} maç · ${p.homeRecord.gf == null ? '—' : p.homeRecord.gf.toFixed(1)} gol attı</b></div><div class="badges">${f(p.homeRecord)}</div><div class="stat-line"><span>${escapeHTML(a.name)}</span><b>${p.awayRecord.count} maç · ${p.awayRecord.gf == null ? '—' : p.awayRecord.gf.toFixed(1)} gol attı</b></div><div class="badges">${f(p.awayRecord)}</div><div class="stat-line"><span>İkili rekabet · tüm ligler</span><b>${hWins}G · ${draws}B · ${aWins}G (${h2h.length})</b></div><div class="stat-line"><span>Eksik oyuncu</span><b>${injuryList.length} bildirim</b></div></div><div class="detail-card"><h3>Muhtemel / açıklanan ilk 11</h3><div class="lineup-columns"><div class="lineup-box"><b>${escapeHTML(h.name)}</b>${playerList(h)}</div><div class="lineup-box"><b>${escapeHTML(a.name)}</b>${playerList(a)}</div></div></div><div class="detail-card"><h3>Sakat / cezalı oyuncular</h3>${injuryList.length ? injuryList.map(x=>`<div class="injury-item">${escapeHTML(x.player.name)} · ${escapeHTML(x.team.name)} <span>${escapeHTML(x.player.reason || 'Eksik')}</span></div>`).join('') : '<div class="injury-item">Bu maç için bildirilmiş eksik bulunamadı. Veri bulunmaması, eksik olmadığı anlamına gelmeyebilir.</div>'}</div><div class="analysis-summary"><h3>Maçın kısa özeti</h3><p>${escapeHTML(paragraph)}</p><div class="badges"><span class="badge">Kaynak: API-Football</span><span class="badge">${d.lineups.length ? 'İlk 11 verisi mevcut' : 'İlk 11 henüz açıklanmadı'}</span><span class="badge warning">Tahmin olasılıksaldır, garanti değildir</span></div></div></div>`;
 }
 
 document.querySelectorAll('.mode-tab').forEach(b => b.addEventListener('click', () => {

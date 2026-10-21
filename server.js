@@ -45,14 +45,14 @@ const server = http.createServer(async (req, res) => {
         const league = match.league;
         const season = league.season;
         const pair = `${home.id}-${away.id}`;
-        const [h2h, injuries, lineups, homeStats, awayStats] = await Promise.all([
+        const [h2h, injuries, lineups, homeRecent, awayRecent] = await Promise.all([
           api('/fixtures/headtohead', { h2h: pair, last: '20' }).catch(() => []),
           api('/injuries', { fixture: id }).catch(() => []),
           api('/fixtures/lineups', { fixture: id }).catch(() => []),
-          api('/teams/statistics', { league: league.id, season, team: home.id }).catch(() => []),
-          api('/teams/statistics', { league: league.id, season, team: away.id }).catch(() => [])
+          api('/fixtures', { team: home.id, last: '10' }).catch(() => []),
+          api('/fixtures', { team: away.id, last: '10' }).catch(() => [])
         ]);
-        return send(res, 200, { match, h2h, injuries, lineups, homeStats: homeStats[0] || null, awayStats: awayStats[0] || null });
+        return send(res, 200, { match, h2h, injuries, lineups, homeRecent, awayRecent });
       }
       return send(res, 404, { error: 'API adresi bulunamadı.' });
     } catch (error) {
