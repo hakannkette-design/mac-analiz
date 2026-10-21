@@ -16,7 +16,7 @@ Tüm liglerdeki maçları fikstür üzerinden arayıp maç öncesi analiz sunan 
 
 ## İnternette yayınlama (Render)
 
-`render.yaml` Render Blueprint tanımıdır. Yayın için bu `outputs` klasöründeki dosyaları bir GitHub deposuna göndermek, Render hesabında **New > Blueprint** ile depoyu bağlamak ve istenince `API_FOOTBALL_KEY` değerini Render ortam değişkeni olarak girmek gerekir. Anahtarı GitHub'a ya da bu dosyalara eklemeyin. Render, uygulamayı `onrender.com` adresinde yayınlar. Render web servisi yapılandırması `PORT` değişkenini kullanır ve uygulama `0.0.0.0` üzerinde dinler.
+`render.yaml` Render Blueprint tanımıdır. Yayın için bu `outputs` klasöründeki dosyaları bir GitHub deposuna göndermek ve Render hesabında **New > Blueprint** ile depoyu bağlamak gerekir. API anahtarı olmadan site demo modunda çalışır. Gerçek veriyi açmak için API anahtarını Render Dashboard'da **Environment** bölümünden `API_FOOTBALL_KEY` adıyla ekleyin; anahtarı GitHub'a ya da bu dosyalara koymayın. Render, uygulamayı `onrender.com` adresinde yayınlar. Render web servisi yapılandırması `PORT` değişkenini kullanır ve uygulama `0.0.0.0` üzerinde dinler.
 
 Bu tanım ücretsiz servis planını seçer. Ücretsiz servislerin çalışma/uyku davranışı ve mevcut limitleri Render planına göre değişebilir; yayın sırasında güncel koşulları kontrol edin.
 
